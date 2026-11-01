@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Ruff lint on Python save",
+      "description": "Run ruff check on saved Python files to catch style and simple bugs early.",
+      "trigger": "PostFileSave",
+      "matcher": "\\.py$",
+      "action": {
+        "type": "command",
+        "command": "python -m ruff check --force-exclude \"$KIRO_FILE_PATH\" 2>/dev/null || ruff check --force-exclude . || true"
+      },
+      "timeout": 60,
+      "enabled": true
+    }
+  ]
+}

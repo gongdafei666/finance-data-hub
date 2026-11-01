@@ -1,0 +1,38 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local env / secrets (do not commit keys)
+.env
+.env.*
+!.env.example
+
+# Build / dist
+dist/
+build/
+*.egg-info/
+
+# Docker
+*.log
+
+# IMPORTANT (Kiroween): do NOT ignore .kiro or any of its subfolders.
+# The /.kiro directory must remain tracked for the submission.

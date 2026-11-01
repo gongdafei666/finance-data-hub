@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance Data Hub — Frankenstein Demo</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #9aa7b8;
+      --accent: #7ee787;
+      --accent2: #79c0ff;
+      --warn: #ffa657;
+      --border: #2d3a4d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1b2a44, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+    }
+    main { max-width: 920px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+    h1 { font-size: 1.75rem; margin: 0 0 0.35rem; }
+    .sub { color: var(--muted); margin-bottom: 1.5rem; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
+    input, select, button {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d121a;
+      color: var(--text);
+      padding: 0.55rem 0.75rem;
+    }
+    button {
+      background: linear-gradient(135deg, #238636, #1f6feb);
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { filter: brightness(1.08); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 0.55rem 0.4rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    .price { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .source { color: var(--accent2); }
+    .warn { color: var(--warn); }
+    pre {
+      margin: 0;
+      overflow: auto;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: #c9d1d9;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      background: #243044;
+      color: var(--muted);
+      margin-left: 0.4rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Finance Data Hub <span class="tag">Kiroween Frankenstein</span></h1>
+    <p class="sub">
+      Stitches Yahoo-like nested meta and Alpha Vantage-like flat GLOBAL_QUOTE
+      mocks into one <code>NormalizedQuote</code> API.
+    </p>
+
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label for="symbol">Symbol</label>
+          <input id="symbol" value="AAPL" list="symbols" />
+          <datalist id="symbols">
+            <option value="AAPL"></option>
+            <option value="MSFT"></option>
+            <option value="BTC-USD"></option>
+            <option value="IBM"></option>
+          </datalist>
+        </div>
+        <div>
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="all">All sources (merge)</option>
+            <option value="yahoo_mock">yahoo_mock only</option>
+            <option value="alphavantage_mock">alphavantage_mock only</option>
+            <option value="default">Default (first hit)</option>
+          </select>
+        </div>
+        <button id="go" type="button">Fetch quotes</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0;font-size:1.05rem;">Normalized results</h2>
+      <div id="table-wrap"><p class="warn">Run a fetch to see stitches.</p></div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0;font-size:1.05rem;">Raw JSON</h2>
+      <pre id="raw">{}</pre>
+    </div>
+  </main>
+  <script>
+    const tableWrap = document.getElementById("table-wrap");
+    const raw = document.getElementById("raw");
+
+    function renderTable(quotes) {
+      if (!quotes.length) {
+        tableWrap.innerHTML = '<p class="warn">No quotes returned.</p>';
+        return;
+      }
+      const rows = quotes.map(q => `
+        <tr>
+          <td>${q.symbol}</td>
+          <td class="price">${Number(q.price).toFixed(2)}</td>
+          <td>${q.currency}</td>
+          <td>${q.as_of}</td>
+          <td class="source">${q.source}</td>
+          <td><code>${q.raw_meta?.shape || ""}</code></td>
+        </tr>`).join("");
+      tableWrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th><th>Price</th><th>CCY</th>
+              <th>As of</th><th>Source</th><th>Raw shape</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    async function fetchQuotes() {
+      const symbol = document.getElementById("symbol").value.trim() || "AAPL";
+      const mode = document.getElementById("mode").value;
+      let url;
+      if (mode === "all") {
+        url = `/api/v1/quotes/${encodeURIComponent(symbol)}/all`;
+      } else if (mode === "default") {
+        url = `/api/v1/quotes/${encodeURIComponent(symbol)}`;
+      } else {
+        url = `/api/v1/quotes/${encodeURIComponent(symbol)}?source=${encodeURIComponent(mode)}`;
+      }
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        raw.textContent = JSON.stringify(data, null, 2);
+        if (!res.ok) {
+          tableWrap.innerHTML = `<p class="warn">${data.detail || res.statusText}</p>`;
+          return;
+        }
+        const quotes = Array.isArray(data) ? data : [data];
+        renderTable(quotes);
+      } catch (err) {
+        tableWrap.innerHTML = `<p class="warn">${err}</p>`;
+      }
+    }
+
+    document.getElementById("go").addEventListener("click", fetchQuotes);
+    fetchQuotes();
+  </script>
+</body>
+</html>
